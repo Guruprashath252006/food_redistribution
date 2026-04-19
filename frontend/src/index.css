@@ -1,0 +1,238 @@
+@import "tailwindcss";
+/* Professional product typography is loaded in index.html. */
+
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-display: "IBM Plex Serif", "IBM Plex Sans", Georgia, serif;
+
+  /* Calibrated for a calmer, professional operations-product feel. */
+  --text-xs: 11px;       
+  --text-sm: 13px;       
+  --text-base: 15.5px;     
+  --text-lg: 18px;       
+  --text-xl: 21px;       
+  --text-2xl: 26px;      
+  --text-3xl: 34px;      
+  --text-4xl: 42px;      
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --primary-glow: rgba(16, 185, 129, 0.3);
+  --bg-color: #f8fafc;
+  --text-color: #0f172a;    
+  --text-muted: #64748b;
+  --glass-bg: rgba(255, 255, 255, 0.98);
+  --glass-border: #e2e8f0;
+  --glass-shadow: rgba(15, 23, 42, 0.05);
+}
+
+.dark {
+  --bg-color: #020617;
+  --text-color: #f1f5f9;    
+  --text-muted: #94a3b8;
+  --glass-bg: rgba(15, 23, 42, 0.85);
+  --glass-border: #1e293b;
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* Base reading style */
+body {
+  background-color: var(--bg-color);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: -0.003em;
+  color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Page titles */
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+}
+
+/* Section headers */
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+}
+
+/* Card headings */
+h3, .h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+/* Body copy */
+p {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: -0.003em;
+}
+
+/* Meta labels */
+small, .text-sm {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+}
+
+/* Tone down overly loud utility combinations used across the prototype UI. */
+.font-black {
+  font-weight: 700;
+}
+
+.font-bold {
+  font-weight: 600;
+}
+
+.tracking-widest {
+  letter-spacing: 0.11em;
+}
+
+.tracking-\[0\.2em\],
+.tracking-\[0\.25em\],
+.tracking-\[0\.3em\] {
+  letter-spacing: 0.12em;
+}
+
+h1.uppercase,
+h2.uppercase,
+h3.uppercase {
+  text-transform: none;
+}
+
+
+/* Custom Utilities - Tailwind v4 Syntax */
+@utility glass {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility glass-card {
+  @apply glass rounded-[2.5rem] p-10;
+}
+
+@utility primary-button {
+  font-family: var(--font-sans);
+  @apply bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold tracking-tight text-[14px] transition-colors shadow-sm shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 border border-emerald-600/20;
+}
+
+@utility primary-glow-button {
+  font-family: var(--font-sans);
+  @apply relative overflow-hidden bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-4 rounded-2xl font-bold tracking-[0.04em] text-[15px] transition-all hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] active:scale-[0.98];
+}
+
+@utility secondary-button {
+  font-family: var(--font-sans);
+  @apply bg-white/70 dark:bg-slate-950/40 backdrop-blur-md text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 px-6 py-3 rounded-xl font-semibold tracking-tight text-[14px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm;
+}
+
+@utility text-gradient {
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, var(--tw-gradient-from), var(--tw-gradient-to));
+  --tw-gradient-from: #10b981; /* emerald-500 */
+  --tw-gradient-to: #34d399; /* emerald-400 */
+}
+
+@utility mesh-bg {
+  background-color: var(--bg-color);
+  background-image: 
+    radial-gradient(at 40% 20%, hsla(140,86%,85%,0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189,100%,86%,0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(355,85%,93%,0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, hsla(340,100%,86%,0.1) 0px, transparent 50%);
+}
+
+.dark .mesh-bg {
+   background-image: 
+    radial-gradient(at 40% 20%, hsla(140,86%,15%,0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189,100%,16%,0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(355,85%,13%,0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, hsla(340,100%,16%,0.15) 0px, transparent 50%);
+}
+
+/* Custom Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-emerald {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-emerald {
+  animation: pulse-emerald 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@utility avatar-initials {
+  @apply flex items-center justify-center rounded-full font-black uppercase tracking-tighter text-white select-none;
+}
+
+/* Staggered animation delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
