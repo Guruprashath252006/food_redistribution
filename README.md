@@ -39,4 +39,4 @@ This project is ready for deployment:
    - Frontend: `VITE_API_BASE_URL`.
 
 ---
-*Created with ❤️ by Antigravity for HungerXchange.*
+*Created with ❤️ by Guruprashath*
