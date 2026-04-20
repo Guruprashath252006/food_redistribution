@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../context/appDataContext';
 import BorderGlow from '../components/ui/BorderGlow';
 import { useOverlay } from '../components/ui/overlayContext';
 import { Search, MapPin, Clock, ArrowRight, ShieldCheck, Tag, Info, ShoppingCart, Waves } from 'lucide-react';
 
 const Marketplace = () => {
+      const navigate = useNavigate();
 	    const { user, availableItems, requestListing, cancelRequest } = useAppData();
       const { prompt, toast, confirm, form } = useOverlay();
 	    const [searchQuery, setSearchQuery] = useState('');
@@ -171,7 +173,10 @@ const Marketplace = () => {
             </div>
             
             <div className="flex bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-2 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-2xl">
-              <button className="primary-button flex items-center text-[16px] px-8 py-3.5">
+              <button 
+                className="primary-button flex items-center text-[16px] px-8 py-3.5"
+                onClick={() => navigate('/listings')}
+              >
                 <ShoppingCart size={20} className="mr-2" /> View My Orders
               </button>
             </div>

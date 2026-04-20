@@ -6,7 +6,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Marketplace from './pages/Marketplace';
-import Impact from './pages/ImpactLive';
+import Listings from './pages/Listings';
 import Map from './pages/Map';
 import Community from './pages/CommunityLive';
 import Settings from './pages/Settings';
@@ -42,7 +42,7 @@ function App() {
             >
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/impact" element={<Impact />} />
+              <Route path="/listings" element={<Listings />} />
               <Route path="/map" element={<Map />} />
               <Route path="/community" element={<Community />} />
               <Route path="/settings" element={<Settings />} />

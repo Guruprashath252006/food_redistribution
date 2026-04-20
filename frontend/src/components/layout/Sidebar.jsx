@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppData } from '../../context/appDataContext';
-import { LayoutDashboard, Store, LineChart, Map as MapIcon, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Store, History, Map as MapIcon, Users, Settings, LogOut } from 'lucide-react';
 import Brand from '../ui/Brand';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -10,7 +10,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
     { name: 'Marketplace', path: '/marketplace', icon: <Store size={18} /> },
-    { name: 'Impact Records', path: '/impact', icon: <LineChart size={18} /> },
+    { name: 'Listings', path: '/listings', icon: <History size={18} /> },
     { name: 'Route Map', path: '/map', icon: <MapIcon size={18} /> },
     { name: 'Network Feed', path: '/community', icon: <Users size={18} /> },
     { name: 'Console Prefs', path: '/settings', icon: <Settings size={18} /> },

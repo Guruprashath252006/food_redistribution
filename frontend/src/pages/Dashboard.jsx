@@ -324,20 +324,37 @@ const Dashboard = () => {
 
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
+      async ({ coords }) => {
         const lat = Number(coords?.latitude || 0).toFixed(5);
         const lng = Number(coords?.longitude || 0).toFixed(5);
         const accuracy = Math.round(coords?.accuracy || 0);
 
+        let locationString = `Current location (${lat}, ${lng})${accuracy ? ` • ±${accuracy}m` : ''}`;
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.display_name) {
+              // Simplify the address if it's too long
+              const parts = data.display_name.split(', ');
+              const shortAddress = parts.slice(0, 3).join(', ');
+              locationString = `${shortAddress} (${lat}, ${lng})`;
+            }
+          }
+        } catch (error) {
+          console.error("Reverse geocoding failed", error);
+        }
+
         setForm((prev) => ({
           ...prev,
-          location: `Current location (${lat}, ${lng})${accuracy ? ` • ±${accuracy}m` : ''}`,
+          location: locationString,
         }));
         setIsLocating(false);
         toast({
           variant: 'success',
           title: 'Location added',
-          description: 'Your current coordinates were inserted into pickup location.',
+          description: 'Your actual address has been applied to the listing.',
         });
       },
       () => {
