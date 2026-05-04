@@ -1,83 +1,129 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useAppData } from '../context/appDataContext';
-import { Store, HandHeart, LogIn, UserPlus, ArrowLeft, ShieldAlert, Sparkles, ShieldCheck, ArrowUpRight, CheckCircle } from 'lucide-react';
-import Brand from '../components/ui/Brand';
+import {
+  Store, HandHeart, LogIn, UserPlus, ArrowLeft,
+  ShieldAlert, Sparkles, CheckCircle, Eye, EyeOff, Leaf
+} from 'lucide-react';
+
+/* ─── Google "G" icon ─────────────────────────────────────────── */
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M47.532 24.5528C47.532 22.9214 47.3997 21.2811 47.1175 19.6761H24.48V28.9181H37.4434C36.8717 31.8988 35.1753 34.5478 32.6711 36.2691V42.2078H40.3801C44.9217 38.0278 47.532 31.8547 47.532 24.5528Z" fill="#4285F4"/>
+    <path d="M24.48 48.0016C30.9529 48.0016 36.4116 45.8764 40.3888 42.2078L32.6798 36.2691C30.5307 37.7271 27.7616 38.5583 24.4888 38.5583C18.2275 38.5583 12.9187 34.3303 11.0139 28.6006H3.03296V34.7183C7.10718 42.8431 15.4056 48.0016 24.48 48.0016Z" fill="#34A853"/>
+    <path d="M11.0051 28.6006C10.0023 25.6199 10.0023 22.3922 11.0051 19.4115V13.2938H3.03298C-0.371021 20.0036 -0.371021 28.0085 3.03298 34.7183L11.0051 28.6006Z" fill="#FBBC04"/>
+    <path d="M24.48 9.44961C27.9016 9.39427 31.2086 10.7079 33.6866 13.0973L40.5387 6.24523C36.2 2.17101 30.4414 -0.068932 24.48 0.00161733C15.4055 0.00161733 7.10718 5.16011 3.03296 13.2938L11.005 19.4115C12.901 13.6731 18.2187 9.44961 24.48 9.44961Z" fill="#EA4335"/>
+  </svg>
+);
+
+/* ─── Floating orb background ─────────────────────────────────── */
+const Background = () => (
+  <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div style={{
+      position: 'absolute', top: '-10%', left: '-5%',
+      width: 480, height: 480, borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%)',
+      filter: 'blur(40px)'
+    }} />
+    <div style={{
+      position: 'absolute', bottom: '-8%', right: '-8%',
+      width: 520, height: 520, borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
+      filter: 'blur(40px)'
+    }} />
+    <div style={{
+      position: 'absolute', top: '40%', right: '20%',
+      width: 280, height: 280, borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
+      filter: 'blur(40px)'
+    }} />
+    {/* Grid pattern */}
+    <div style={{
+      position: 'absolute', inset: 0,
+      backgroundImage: 'linear-gradient(rgba(16,185,129,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.04) 1px, transparent 1px)',
+      backgroundSize: '48px 48px'
+    }} />
+  </div>
+);
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [role, setRole] = useState('DONOR');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register } = useAppData();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const { login, register, googleLogin } = useAppData();
   const navigate = useNavigate();
 
-  // Switch to sign-up tab, carry the email over
-  const switchToSignup = (prefilledEmail = '') => {
-    setIsLogin(false);
-    setError('');
-    setSuccessMsg('');
-    if (prefilledEmail) setEmail(prefilledEmail);
+  const switchToSignup = (pre = '') => {
+    setIsLogin(false); setError(''); setSuccessMsg('');
+    if (pre) setEmail(pre);
+    setPassword('');
+  };
+  const switchToSignin = (pre = '') => {
+    setIsLogin(true); setError(''); setSuccessMsg('');
+    if (pre) setEmail(pre);
     setPassword('');
   };
 
-  // Switch to sign-in tab, carry the email over
-  const switchToSignin = (prefilledEmail = '') => {
-    setIsLogin(true);
+  /* ─── Google OAuth ──────────────────────────────────────────── */
+  const handleGoogleSuccess = async (tokenResponse) => {
+    setGoogleLoading(true);
     setError('');
-    setSuccessMsg('');
-    if (prefilledEmail) setEmail(prefilledEmail);
-    setPassword('');
+    try {
+      // Exchange access_token for user info, then send to backend
+      const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+      });
+      const userInfo = await userInfoRes.json();
+      // We pass the sub (google id) + email + name directly — backend uses ID token verify
+      // Use implicit flow: send access token to get credential
+      await googleLogin(tokenResponse.access_token, role);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
+  const triggerGoogleLogin = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => setError('Google sign-in was cancelled or failed.'),
+  });
+
+  /* ─── Email/Password submit ─────────────────────────────────── */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccessMsg('');
-
-    if (!email || !email.includes('@')) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
-      return;
-    }
-    if (!isLogin && !name.trim()) {
-      setError('Please enter your name.');
-      return;
-    }
+    setError(''); setSuccessMsg('');
+    if (!email || !email.includes('@')) { setError('Please enter a valid email address.'); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (!isLogin && !name.trim()) { setError('Please enter your name.'); return; }
 
     setIsLoading(true);
-
     try {
       if (isLogin) {
-        // ── SIGN IN ────────────────────────────────────────────────
         await login(email, password);
         navigate('/dashboard');
       } else {
-        // ── SIGN UP ────────────────────────────────────────────────
         await register(email, password, role, name.trim());
-        // After successful signup → go back to sign-in
-        setSuccessMsg(`Account created! Sign in with your new credentials.`);
+        setSuccessMsg('Account created! Sign in with your new credentials.');
         switchToSignin(email);
       }
     } catch (err) {
       const code = err?.response?.data?.code;
       const msg = err?.response?.data?.message || err.message || 'Something went wrong.';
-
       if (isLogin && code === 'USER_NOT_FOUND') {
-        // No account with this email → redirect to signup automatically
         setError('');
         switchToSignup(email);
-        // Small delay so the tab switches first, then show the info
-        setTimeout(() => {
-          setSuccessMsg(`No account found for "${email}". Create one below.`);
-        }, 50);
+        setTimeout(() => setSuccessMsg(`No account for "${email}". Create one below.`), 50);
       } else {
         setError(msg);
       }
@@ -86,248 +132,337 @@ const Login = () => {
     }
   };
 
-  return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbfa_0%,_#eef4f5_100%)] px-4 py-4 transition-colors duration-300 dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.14),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)]">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[8%] top-[10%] h-72 w-72 rounded-full bg-emerald-400/15 blur-[110px]" />
-        <div className="absolute bottom-[8%] right-[10%] h-80 w-80 rounded-full bg-sky-400/10 blur-[120px]" />
-      </div>
+  /* ─── Styles ────────────────────────────────────────────────── */
+  const inputCls = `
+    w-full h-12 rounded-2xl border px-4 text-sm font-medium outline-none transition-all duration-200
+    bg-white/60 dark:bg-slate-900/60
+    border-slate-200 dark:border-slate-700/70
+    text-slate-900 dark:text-white
+    placeholder:text-slate-400 dark:placeholder:text-slate-500
+    focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15
+    backdrop-blur-sm
+  `;
 
-      <div className="relative z-10 w-full max-w-6xl">
-        <Link to="/" className="group mb-4 inline-flex items-center text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 transition-colors hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-300">
-          <ArrowLeft size={18} className="mr-3 transition-transform group-hover:-translate-x-1" /> Back to hub home
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px',
+      background: 'linear-gradient(135deg, #f0fdf8 0%, #eff6ff 50%, #faf5ff 100%)',
+      position: 'relative'
+    }} className="dark:bg-[linear-gradient(135deg,#020617_0%,#0a0f1e_50%,#0d0a1e_100%)]">
+
+      <Background />
+
+      <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 1100 }}>
+
+        {/* Back link */}
+        <Link to="/" className="group mb-6 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+          <ArrowLeft size={15} className="transition-transform group-hover:-translate-x-1" />
+          Back to home
         </Link>
 
-        <div className="grid overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-2xl shadow-slate-900/10 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/75 lg:grid-cols-[0.95fr_1.05fr]">
+        {/* Card */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0,1fr)',
+          borderRadius: 28,
+          overflow: 'hidden',
+          border: '1px solid rgba(255,255,255,0.7)',
+          boxShadow: '0 32px 64px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.05)',
+          backdropFilter: 'blur(24px)',
+          background: 'rgba(255,255,255,0.75)'
+        }} className="dark:border-slate-800/60 dark:bg-slate-900/70 lg:grid-cols-[0.9fr_1.1fr]">
+
           {/* ── Left panel ── */}
-          <div className="relative hidden overflow-hidden border-r border-slate-200/70 p-8 dark:border-slate-800/70 lg:flex lg:flex-col lg:justify-between">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),_transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.16),_transparent_30%)]" />
-            <div className="relative">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/70 bg-emerald-50/80 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
-                <Sparkles size={14} /> HungerXchange Access
+          <div style={{
+            display: 'none', flexDirection: 'column', justifyContent: 'space-between',
+            padding: '44px', position: 'relative',
+            borderRight: '1px solid rgba(226,232,240,0.6)',
+            background: 'linear-gradient(145deg, rgba(16,185,129,0.06) 0%, rgba(99,102,241,0.04) 100%)'
+          }} className="lg:flex dark:border-slate-800/60">
+
+            <div>
+              {/* Badge */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 14px', borderRadius: 100,
+                background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
+                fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', color: '#059669',
+                textTransform: 'uppercase', marginBottom: 28
+              }} className="dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400">
+                <Sparkles size={13} /> HungerXchange Access
               </div>
-              <div className="mt-6 flex items-center gap-4">
-                <Brand size="md" showText={false} />
+
+              {/* Brand */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '0 8px 24px rgba(16,185,129,0.3)'
+                }}>
+                  <Leaf size={26} color="white" />
+                </div>
                 <div>
-                  <p className="text-sm font-black uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Redistribution OS</p>
-                  <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900 dark:text-white">Move food faster.</h1>
+                  <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 4 }} className="dark:text-slate-500">
+                    Redistribution OS
+                  </p>
+                  <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', lineHeight: 1.1 }} className="dark:text-white">
+                    Move food.<br />Save lives.
+                  </h1>
                 </div>
               </div>
-              <p className="mt-6 max-w-md text-base font-medium leading-7 text-slate-600 dark:text-slate-300">
-                Simple access for donors and receivers coordinating surplus food in real time.
+
+              <p style={{ fontSize: 15, lineHeight: 1.7, color: '#64748b', maxWidth: 340 }} className="dark:text-slate-400">
+                A real-time platform connecting food donors and receivers to eliminate waste and fight hunger across communities.
               </p>
             </div>
 
-            <div className="relative mt-8 space-y-3">
-              <div className="rounded-[1.5rem] border border-slate-200/80 bg-white/75 p-5 shadow-lg dark:border-slate-800/70 dark:bg-slate-950/40">
-                <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                  <ShieldCheck size={14} className="text-emerald-500" /> Secure partner access
-                </p>
-                <p className="mt-2 text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                  One entry point for donors and rescue teams
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Choose your console, authenticate, and jump directly into listings, requests, pickups, and impact records.
-                </p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[1.35rem] border border-slate-200/80 bg-white/70 p-4 dark:border-slate-800/70 dark:bg-slate-950/35">
-                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Donor</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">List available food, verify requests, and assign pickups in minutes.</p>
+            {/* Feature cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { emoji: '🏪', title: 'Donor Console', desc: 'List surplus food, manage pickup requests, and track your impact in real time.' },
+                { emoji: '🤝', title: 'Receiver Console', desc: 'Browse available donations, submit requests, and coordinate pickups nearby.' },
+                { emoji: '📊', title: 'Live Impact', desc: 'Watch kg saved, carbon offset, and community reach grow with every transaction.' },
+              ].map((f) => (
+                <div key={f.title} style={{
+                  padding: '16px 20px', borderRadius: 18,
+                  background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(226,232,240,0.7)',
+                  display: 'flex', gap: 14, alignItems: 'flex-start'
+                }} className="dark:bg-slate-950/40 dark:border-slate-800/60">
+                  <span style={{ fontSize: 22 }}>{f.emoji}</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', marginBottom: 3 }} className="dark:text-white">{f.title}</p>
+                    <p style={{ fontSize: 12, lineHeight: 1.6, color: '#64748b' }} className="dark:text-slate-400">{f.desc}</p>
+                  </div>
                 </div>
-                <div className="rounded-[1.35rem] border border-slate-200/80 bg-white/70 p-4 dark:border-slate-800/70 dark:bg-slate-950/35">
-                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Receiver</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Request nearby items, track approvals, and manage live pickup queues.</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
           {/* ── Right panel (form) ── */}
-          <div className="p-6 sm:p-8 md:p-9">
-            <div className="mx-auto w-full max-w-md">
-              <div className="mb-5 lg:hidden">
-                <div className="flex items-center justify-center">
-                  <Brand size="md" showText={false} />
+          <div style={{ padding: '44px 40px' }} className="sm:p-12">
+            <div style={{ maxWidth: 420, margin: '0 auto' }}>
+
+              {/* Mobile brand */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, gap: 12 }} className="lg:hidden">
+                <div style={{
+                  width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '0 6px 20px rgba(16,185,129,0.3)'
+                }}>
+                  <Leaf size={22} color="white" />
                 </div>
+                <span style={{ fontSize: 20, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }} className="dark:text-white">HungerXchange</span>
               </div>
 
               {/* Tab switcher */}
-              <div className="rounded-full border border-slate-200/80 bg-slate-100/80 p-1.5 dark:border-slate-800/80 dark:bg-slate-950/50">
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => switchToSignin()}
-                    className={`rounded-full px-4 py-2.5 text-sm font-black tracking-tight transition-all ${
-                      isLogin
-                        ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
-                        : 'text-slate-500 dark:text-slate-400'
-                    }`}
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => switchToSignup()}
-                    className={`rounded-full px-4 py-2.5 text-sm font-black tracking-tight transition-all ${
-                      !isLogin
-                        ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white'
-                        : 'text-slate-500 dark:text-slate-400'
-                    }`}
-                  >
-                    Sign up
-                  </button>
-                </div>
+              <div style={{
+                background: 'rgba(241,245,249,0.8)', borderRadius: 100,
+                padding: 5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4,
+                border: '1px solid rgba(226,232,240,0.6)', marginBottom: 28
+              }} className="dark:bg-slate-950/60 dark:border-slate-800/70">
+                {['Sign in', 'Sign up'].map((label, i) => {
+                  const active = i === 0 ? isLogin : !isLogin;
+                  return (
+                    <button
+                      key={label} type="button"
+                      onClick={() => i === 0 ? switchToSignin() : switchToSignup()}
+                      style={{
+                        borderRadius: 100, padding: '10px 16px', fontSize: 14, fontWeight: 800,
+                        transition: 'all 0.2s',
+                        background: active ? 'white' : 'transparent',
+                        color: active ? '#0f172a' : '#94a3b8',
+                        boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                        border: 'none', cursor: 'pointer'
+                      }}
+                      className={active ? 'dark:bg-slate-800 dark:text-white' : 'dark:text-slate-500 dark:hover:text-slate-300'}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="mt-5">
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300">
-                  {isLogin ? 'Welcome back' : 'Create account'}
+              {/* Heading */}
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#10b981', marginBottom: 6 }}>
+                  {isLogin ? 'Welcome back' : 'Get started'}
                 </p>
-                <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                  {isLogin ? 'Sign in to your workspace' : 'Join the redistribution network'}
+                <h2 style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: 6 }} className="dark:text-white">
+                  {isLogin ? 'Sign in to your workspace' : 'Join the network'}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                  {isLogin
-                    ? 'Enter your credentials to continue. New here? Switch to Sign up.'
-                    : 'Create your account, then sign in to start coordinating.'}
+                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }} className="dark:text-slate-400">
+                  {isLogin ? 'Enter your credentials below or use Google.' : 'Create your account and start redistributing food.'}
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              {/* Google button */}
+              <button
+                type="button"
+                onClick={() => triggerGoogleLogin()}
+                disabled={googleLoading || isLoading}
+                style={{
+                  width: '100%', height: 48, borderRadius: 16, border: '1.5px solid rgba(226,232,240,0.9)',
+                  background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 12, fontSize: 14, fontWeight: 700, color: '#1e293b', cursor: 'pointer',
+                  transition: 'all 0.2s', marginBottom: 20,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  backdropFilter: 'blur(8px)'
+                }}
+                className="dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-white hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 disabled:opacity-50"
+              >
+                {googleLoading ? (
+                  <span style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#10b981', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                ) : <GoogleIcon />}
+                Continue with Google
+              </button>
 
-                {/* Role chooser — shown on BOTH tabs */}
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(226,232,240,0.7)' }} className="dark:bg-slate-800/70" />
+                <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, letterSpacing: '0.06em' }}>or</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(226,232,240,0.7)' }} className="dark:bg-slate-800/70" />
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                {/* Role selector */}
                 <div>
-                  <label className="px-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Choose console
+                  <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#94a3b8', display: 'block', marginBottom: 8 }}>
+                    Choose your role
                   </label>
-                  <div className="mt-2 grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setRole('DONOR')}
-                      className={`rounded-[1.35rem] border p-4 text-left transition-all ${
-                        role === 'DONOR'
-                          ? 'border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/30'
-                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/35 dark:hover:border-slate-700'
-                      }`}
-                    >
-                      <Store size={20} className={role === 'DONOR' ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-400'} />
-                      <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-slate-900 dark:text-white">Donor</p>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">List food and manage requests.</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('RECEIVER')}
-                      className={`rounded-[1.35rem] border p-4 text-left transition-all ${
-                        role === 'RECEIVER'
-                          ? 'border-sky-300 bg-sky-50 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/30'
-                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/35 dark:hover:border-slate-700'
-                      }`}
-                    >
-                      <HandHeart size={20} className={role === 'RECEIVER' ? 'text-sky-600 dark:text-sky-300' : 'text-slate-400'} />
-                      <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-slate-900 dark:text-white">Receiver</p>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">Request items and track pickups.</p>
-                    </button>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {[
+                      { value: 'DONOR', label: 'Donor', desc: 'List & share food', Icon: Store, color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)' },
+                      { value: 'RECEIVER', label: 'Receiver', desc: 'Request pickups', Icon: HandHeart, color: '#6366f1', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.3)' },
+                    ].map(({ value, label, desc, Icon, color, bg, border }) => {
+                      const selected = role === value;
+                      return (
+                        <button
+                          key={value} type="button" onClick={() => setRole(value)}
+                          style={{
+                            padding: '14px 12px', borderRadius: 16, textAlign: 'left', cursor: 'pointer',
+                            border: `1.5px solid ${selected ? border : 'rgba(226,232,240,0.7)'}`,
+                            background: selected ? bg : 'rgba(255,255,255,0.7)',
+                            transition: 'all 0.2s',
+                            boxShadow: selected ? `0 4px 16px ${color}20` : 'none'
+                          }}
+                          className={!selected ? 'dark:border-slate-800 dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700' : 'dark:bg-opacity-20'}
+                        >
+                          <Icon size={20} style={{ color: selected ? color : '#94a3b8', marginBottom: 8 }} />
+                          <p style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', marginBottom: 2 }} className="dark:text-white">{label}</p>
+                          <p style={{ fontSize: 11, color: '#94a3b8' }}>{desc}</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Success banner */}
+                {/* Alerts */}
                 {successMsg && (
-                  <div className="flex items-start gap-3 rounded-[1.25rem] border border-emerald-200 bg-emerald-50/90 p-3.5 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    <CheckCircle size={18} className="mt-0.5 shrink-0" />
-                    <p className="text-sm font-semibold leading-5">{successMsg}</p>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 14, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#059669' }} className="dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400">
+                    <CheckCircle size={16} style={{ marginTop: 1, flexShrink: 0 }} />
+                    <p style={{ fontSize: 13, fontWeight: 600 }}>{successMsg}</p>
                   </div>
                 )}
-
-                {/* Error banner */}
                 {error && (
-                  <div className="flex items-start gap-3 rounded-[1.25rem] border border-rose-200 bg-rose-50/90 p-3.5 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
-                    <ShieldAlert size={18} className="mt-0.5 shrink-0" />
-                    <p className="text-sm font-semibold leading-5">{error}</p>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 14, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626' }} className="dark:bg-rose-950/30 dark:border-rose-900/50 dark:text-rose-400">
+                    <ShieldAlert size={16} style={{ marginTop: 1, flexShrink: 0 }} />
+                    <p style={{ fontSize: 13, fontWeight: 600 }}>{error}</p>
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  {/* Name field — only on sign-up */}
-                  {!isLogin && (
-                    <div>
-                      <label className="px-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                        Your name / Organisation
-                      </label>
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Green Table Bistro"
-                        className="mt-2 h-12 w-full rounded-[1.15rem] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 shadow-inner shadow-slate-900/5 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-800 dark:bg-slate-950/60 dark:text-white"
-                      />
-                    </div>
-                  )}
-
+                {/* Name (signup only) */}
+                {!isLogin && (
                   <div>
-                    <label className="px-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                      Email
+                    <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#94a3b8', display: 'block', marginBottom: 6 }}>
+                      Name / Organisation
                     </label>
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={isLogin ? 'partner@hungerxchange.org' : 'your@workspace.org'}
-                      className="mt-2 h-12 w-full rounded-[1.15rem] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 shadow-inner shadow-slate-900/5 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-800 dark:bg-slate-950/60 dark:text-white"
+                      type="text" value={name} onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Green Table Bistro"
+                      className={inputCls}
                     />
                   </div>
+                )}
 
-                  <div>
-                    <label className="px-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                      Password
-                    </label>
+                {/* Email */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#94a3b8', display: 'block', marginBottom: 6 }}>
+                    Email
+                  </label>
+                  <input
+                    type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    placeholder={isLogin ? 'you@example.com' : 'your@workspace.org'}
+                    className={inputCls}
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#94a3b8', display: 'block', marginBottom: 6 }}>
+                    Password
+                  </label>
+                  <div style={{ position: 'relative' }}>
                     <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      type={showPassword ? 'text' : 'password'}
+                      value={password} onChange={(e) => setPassword(e.target.value)}
                       placeholder={isLogin ? 'Enter your password' : 'Min. 8 characters'}
-                      className="mt-2 h-12 w-full rounded-[1.15rem] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 shadow-inner shadow-slate-900/5 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-800 dark:bg-slate-950/60 dark:text-white"
+                      className={inputCls}
+                      style={{ paddingRight: 44 }}
                     />
+                    <button
+                      type="button" onClick={() => setShowPassword(!showPassword)}
+                      style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 0 }}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
 
+                {/* Submit */}
                 <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="group inline-flex h-12 w-full items-center justify-center rounded-[1.15rem] bg-slate-900 px-5 text-sm font-black tracking-[0.04em] text-white transition-all hover:bg-emerald-600 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-emerald-400"
+                  type="submit" disabled={isLoading || googleLoading}
+                  style={{
+                    width: '100%', height: 50, borderRadius: 16, border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white', fontSize: 15, fontWeight: 800, letterSpacing: '-0.01em',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    transition: 'all 0.2s',
+                    boxShadow: '0 8px 24px rgba(16,185,129,0.35)',
+                    marginTop: 4
+                  }}
+                  className="hover:brightness-110 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isLoading ? (
-                    <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin dark:border-slate-900 dark:border-t-transparent" />
+                    <span style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
                   ) : isLogin ? (
-                    <>
-                      <LogIn size={18} className="mr-3" /> Sign in
-                      <ArrowUpRight size={16} className="ml-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </>
+                    <><LogIn size={18} /> Sign in</>
                   ) : (
-                    <>
-                      <UserPlus size={18} className="mr-3" /> Create account
-                      <ArrowUpRight size={16} className="ml-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </>
+                    <><UserPlus size={18} /> Create account</>
                   )}
                 </button>
               </form>
 
-              <div className="mt-5 border-t border-slate-200/80 pt-4 text-center dark:border-slate-800/80">
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                  {isLogin ? 'New here?' : 'Already have an account?'}{' '}
-                  <button
-                    onClick={() => isLogin ? switchToSignup() : switchToSignin()}
-                    className="font-black text-emerald-600 transition-colors hover:text-emerald-700 dark:text-emerald-300 dark:hover:text-emerald-200"
-                  >
-                    {isLogin ? 'Create an account' : 'Sign in instead'}
-                  </button>
-                </p>
-              </div>
+              {/* Toggle */}
+              <p style={{ textAlign: 'center', fontSize: 13, color: '#94a3b8', marginTop: 20 }} className="dark:text-slate-500">
+                {isLogin ? "Don't have an account? " : 'Already have an account? '}
+                <button
+                  onClick={() => isLogin ? switchToSignup() : switchToSignin()}
+                  style={{ color: '#10b981', fontWeight: 800, background: 'none', border: 'none', cursor: 'pointer' }}
+                  className="hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                  {isLogin ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Spin animation */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };

@@ -196,6 +196,15 @@ export const AppDataProvider = ({ children }) => {
     localStorage.removeItem('hx_notifications');
   };
 
+  const googleLogin = async (credential, role) => {
+    const { data } = await api.post('/auth/google', { credential, role });
+    localStorage.setItem('hx_token', data.token);
+    localStorage.setItem('hx_user', JSON.stringify(data.user));
+    setUser(data.user);
+    fetchListings();
+  };
+
+
   const updateUser = async (profileData) => {
     const { data } = await api.put('/auth/profile', profileData);
     const updated = data.user;
@@ -381,6 +390,7 @@ export const AppDataProvider = ({ children }) => {
     clearNotifications,
     login,
     register,
+    googleLogin,
     logout,
     updateUser,
     changePassword,

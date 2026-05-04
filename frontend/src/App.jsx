@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AppDataProvider } from './context/AppDataContext.jsx';
 import { useAppData } from './context/appDataContext';
 import MainLayout from './components/layout/MainLayout';
@@ -13,6 +14,9 @@ import Settings from './pages/Settings';
 import OverlayProvider from './components/ui/OverlayProvider';
 import './App.css';
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
   const { user } = useAppData();
@@ -24,33 +28,35 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <AppDataProvider>
-      <OverlayProvider>
-        <Router>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            
-            {/* Protected Routes inside MainLayout */}
-            <Route 
-              element={
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/listings" element={<Listings />} />
-              <Route path="/map" element={<Map />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/settings" element={<Settings />} />
-            </Route>
-          </Routes>
-        </Router>
-      </OverlayProvider>
-    </AppDataProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <AppDataProvider>
+        <OverlayProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected Routes inside MainLayout */}
+              <Route 
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/listings" element={<Listings />} />
+                <Route path="/map" element={<Map />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
+            </Routes>
+          </Router>
+        </OverlayProvider>
+      </AppDataProvider>
+    </GoogleOAuthProvider>
   );
 }
 

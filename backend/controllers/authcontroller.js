@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/authmodel.js';
 
+
+
 // Helper: sign a JWT
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -12,9 +14,12 @@ const formatUser = (user) => ({
   email: user.email,
   role: user.role,
   bio: user.bio,
+  avatar: user.avatar || '',
   is2FAEnabled: user.is2FAEnabled,
   isVerified: user.isVerified || false,
+  isGoogleUser: !!user.googleId,
 });
+
 
 // POST /api/auth/register
 export const register = async (req, res) => {
@@ -135,3 +140,46 @@ export const deleteAccount = async (req, res) => {
     res.status(500).json({ message: 'Server error deleting account' });
   }
 };
+// POST /api/auth/google
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential, role } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: 'Google credential is required' });
+    }
+
+    // Fetch user info from Google using the access token
+    const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${credential}` },
+    });
+    if (!googleRes.ok) {
+      return res.status(401).json({ message: 'Invalid Google token' });
+    }
+    const { sub: googleId, email, name, picture } = await googleRes.json();
+
+    let user = await User.findOne({ $or: [{ googleId }, { email: email.toLowerCase() }] });
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        googleId,
+        avatar: picture || '',
+        role: role || 'DONOR',
+        isVerified: true,
+      });
+    } else if (!user.googleId) {
+      user.googleId = googleId;
+      user.avatar = picture || user.avatar;
+      user.isVerified = true;
+      await user.save();
+    }
+
+    const token = signToken(user._id);
+    res.json({ token, user: formatUser(user) });
+  } catch (err) {
+    console.error('Google login error:', err);
+    res.status(401).json({ message: 'Google sign-in failed' });
+  }
+};
+
